@@ -10,11 +10,17 @@
 
 #if CONFIG(BOARD_EMULATION_QEMU_X86_Q35)
 /*
- * Qemu has the fw_cfg interface at 0x510.  Move the pmbase to a
- * non-conflicting address.  No need to worry about speedstep, it
- * is not supported by qemu and isn't enabled in the qemu config.
+ * Qemu has the fw_cfg interface at 0x510, so the pmbase must clear it.  No need
+ * to worry about speedstep, it is not supported by qemu and isn't enabled here.
+ *
+ * VirtualBox's emulated q35 does NOT relocate its ACPI PM I/O block when the
+ * ICH9 LPC PMBASE is programmed (unlike real QEMU and real hardware): its PM
+ * block is fixed at 0x4000 (DevACPI PM_PORT_BASE).  Use 0x4000 so the generated
+ * FADT PM timer (PMBASE + 8 = 0x4008) lands on VBox's live timer; otherwise the
+ * edk2 payload's MicroSecondDelay spins forever on a dead port during MP init.
+ * 0x4000 also clears fw_cfg and works on real QEMU, which honours the relocation.
  */
-# define DEFAULT_PMBASE		0x00000600
+# define DEFAULT_PMBASE		0x00004000
 #else
 # define DEFAULT_PMBASE		0x00000500 /* Speedstep code has this hardcoded, too. */
 #endif
