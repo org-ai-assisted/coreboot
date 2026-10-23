@@ -152,8 +152,10 @@ static void bochs_init_text_mode(struct device *dev)
 
 static void bochs_init(struct device *dev)
 {
-	if (dev->vendor == 0x80ee)
-		bochs_data_off = 1;
+	/* VBox VGA (0x80ee) puts the VBE data port at base+1 (0x1cf); QEMU uses base+2
+	 * (0x1d0).  Set per-device so a later non-VBox bochs device cannot inherit a stale
+	 * offset left by an earlier VBox one. */
+	bochs_data_off = (dev->vendor == 0x80ee) ? 1 : 2;
 	if (CONFIG(LINEAR_FRAMEBUFFER))
 		bochs_init_linear_fb(dev);
 	else if (CONFIG(VGA_TEXT_FRAMEBUFFER))
