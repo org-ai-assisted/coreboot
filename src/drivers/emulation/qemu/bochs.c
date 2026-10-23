@@ -41,11 +41,13 @@
 static int width  = CONFIG_DRIVERS_EMULATION_QEMU_XRES;
 static int height = CONFIG_DRIVERS_EMULATION_QEMU_YRES;
 
+static unsigned int bochs_data_off = 2; /* QEMU: data @ base+2 (0x1d0); VBox: base+1 (0x1cf) */
+
 static void bochs_write(struct resource *res, int index, int val)
 {
 	if (res->flags & IORESOURCE_IO) {
 		outw(index, res->base);
-		outw(val, res->base + 2);
+		outw(val, res->base + bochs_data_off);
 	} else {
 		write16(res2mmio(res, 0x500 + index * 2, 0), val);
 	}
@@ -55,7 +57,7 @@ static int bochs_read(struct resource *res, int index)
 {
 	if (res->flags & IORESOURCE_IO) {
 		outw(index, res->base);
-		return inw(res->base + 2);
+		return inw(res->base + bochs_data_off);
 	} else {
 		return read16(res2mmio(res, 0x500 + index * 2, 0));
 	}
@@ -150,6 +152,10 @@ static void bochs_init_text_mode(struct device *dev)
 
 static void bochs_init(struct device *dev)
 {
+	/* VBox VGA (0x80ee) puts the VBE data port at base+1 (0x1cf); QEMU uses base+2
+	 * (0x1d0).  Set per-device so a later non-VBox bochs device cannot inherit a stale
+	 * offset left by an earlier VBox one. */
+	bochs_data_off = (dev->vendor == 0x80ee) ? 1 : 2;
 	if (CONFIG(LINEAR_FRAMEBUFFER))
 		bochs_init_linear_fb(dev);
 	else if (CONFIG(VGA_TEXT_FRAMEBUFFER))
@@ -178,4 +184,11 @@ static const struct pci_driver qemu_qxl_driver __pci_driver = {
 	.ops	= &qemu_graph_ops,
 	.vendor = 0x1b36,
 	.device = 0x0100,
+};
+
+/* VirtualBox VGA (bochs-dispi compatible: legacy 0x1ce/0x1cf + BAR0 LFB). */
+static const struct pci_driver vbox_vga_driver __pci_driver = {
+	.ops	= &qemu_graph_ops,
+	.vendor = 0x80ee,
+	.device = 0xbeef,
 };

@@ -182,6 +182,10 @@ static void acpi_create_mcfg(acpi_header_t *header, void *unused)
 	acpi_mcfg_t *mcfg = (acpi_mcfg_t *)header;
 	unsigned long current = (unsigned long)mcfg + sizeof(acpi_mcfg_t);
 
+	/* VBox/no-ECAM: an entryless MCFG makes UEFI payloads read a bogus
+	   ECAM base and #GP; do not emit it when there are no entries. */
+	if (!CONFIG(ECAM_MMCONF_SUPPORT) && !CONFIG(ACPI_CUSTOM_MCFG))
+		return;
 
 	if (acpi_fill_header(header, "MCFG", MCFG, sizeof(acpi_mcfg_t)) != CB_SUCCESS)
 		return;
