@@ -145,8 +145,10 @@ int fw_cfg_max_cpus(void)
 {
 	unsigned short max_cpus;
 
+	/* VBox/non-QEMU: no fw_cfg. Fall back to the BSP so the ACPI MADT still
+	 * gets a LAPIC entry (else the guest kernel has no APIC -> broken IRQs). */
 	if (!fw_cfg_present())
-		return 0;
+		return 1;
 
 	fw_cfg_get(FW_CFG_MAX_CPUS, &max_cpus, sizeof(max_cpus));
 	return max_cpus;
